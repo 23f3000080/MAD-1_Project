@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from models import db, User
 import uuid
+from functools import wraps
 
 # blueprint
 main = Blueprint('main', __name__)
@@ -72,6 +73,8 @@ def login():
             session['email'] = user.email
             session['name'] = user.name
             flash('Login successful!', 'success')
+            if user.is_admin:
+                return redirect(url_for('main.admin_dashboard'))
             return redirect(url_for('main.user_dashboard'))
         else:
             flash('Invalid email or password.', 'error')
@@ -79,11 +82,81 @@ def login():
 
     return render_template('login.html')
 
+# decorator to protect user routes
+def user_required(func):
+    @wraps(func)
+    def inner(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Please log in to access this page.', 'error')
+            return redirect(url_for('main.login'))
+        
+        user = User.query.get(session['user_id'])
+        if not user:
+            flash('User not found.', 'error')
+            return redirect(url_for('main.login'))
+        
+        # block admin to access user routes
+        if user.is_admin:
+            flash('Admins cannot access this page.', 'error')
+            return redirect(url_for('main.login'))
+        return func(*args, **kwargs)
+    return inner
+
+# decorator to protect admin routes
+def admin_required(func):
+    @wraps(func)
+    def inner(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Please log in to access this page.', 'error')
+            return redirect(url_for('main.login'))
+        
+        user = User.query.get(session['user_id'])
+        if not user:
+            flash('User not found.', 'error')
+            return redirect(url_for('main.login'))
+        
+        # block non-admin users to access admin routes
+        if not user.is_admin:
+            flash('Only admins can access this page.', 'error')
+            return redirect(url_for('main.login'))
+        return func(*args, **kwargs)
+    return inner
+
+@main.route('/logout')
+def logout():
+    session.clear()
+    flash('You have been logged out.', 'success')
+    return redirect(url_for('main.login'))
+
 @main.route('/user/dashboard')
+@user_required
 def user_dashboard():
     if 'user_id' not in session:
-        flash('Please log in to access the dashboard.', 'error')
+        flash('Please log in to continue.', 'error')
         return redirect(url_for('main.login'))
     
     user = User.query.get(session['user_id'])
-    return render_template('user_dashboard.html', user=user)
+    return render_template('user/user_dashboard.html', user=user)
+
+@main.route('/admin/dashboard')
+@admin_required
+def admin_dashboard():
+    if 'user_id' not in session:
+        flash('Please log in to continue.', 'error')
+        return redirect(url_for('main.login'))
+    
+    user = User.query.get(session['user_id'])
+
+    return render_template('admin/admin_dashboard.html', user=user)
+
+@main.route('/user/profile')
+@user_required
+def user_profile():
+    user = User.query.get(session['user_id'])
+    return render_template('user/user_profile.html', user=user)
+
+@main.route('/admin/profile')
+@admin_required
+def admin_profile():
+    user = User.query.get(session['user_id'])
+    return render_template('admin/admin_profile.html', user=user)

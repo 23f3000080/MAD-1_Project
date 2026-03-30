@@ -1,0 +1,54 @@
+<style>
+.flash-messages {
+    background-color: #dc989e;
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 15px;
+    border: 1px solid #f5c6cb;
+    border-radius: 5px;
+    position: absolute;
+    bottom: 80px;
+    right: 70px;
+    max-width: 300px;
+    z-index: 1000;
+    font-size: 14px;
+    font-weight: bold;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.flash-message.success {
+    background-color: #103203;
+    color: #1fd249;
+    border: 1px solid #1a30da;
+}
+
+.flash-message.error {
+    background-color: #a10707;
+    color: #eaa4ab;
+    border: 1px solid #1a30da;
+}
+
+.flash-message.danger {
+    background-color: #a10707;
+    color: #eaa4ab;
+    border: 1px solid #1a30da;
+}
+
+.flash-message.info {
+    background-color: #d36a0e;
+    color: #1b1515;
+    border: 1px solid #1a30da;
+}
+</style>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-messages">
+        {% for category, message in messages %}
+          <div class="flash-message {{ category }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
